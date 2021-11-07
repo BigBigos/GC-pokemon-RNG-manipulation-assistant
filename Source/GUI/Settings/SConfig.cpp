@@ -33,6 +33,12 @@ int SConfig::getThreadLimit() const
   return threadLimit;
 }
 
+unsigned int SConfig::getThreadCount() const
+{
+  const unsigned int threadCount = SConfig::getInstance().getThreadLimit();
+  return (threadCount != 0 ? threadCount : std::thread::hardware_concurrency());
+}
+
 int SConfig::getPredictionTime() const
 {
   return m_settings->value("generalSettings/predictor/time", 10).toInt();
@@ -46,6 +52,16 @@ int SConfig::getFrameOffset() const
 int SConfig::getMaxAutoReroll() const
 {
   return m_settings->value("generalSettings/predictor/MaxAutoReroll", 100).toInt();
+}
+
+double SConfig::getMinAdvancesFactor() const
+{
+  return m_settings->value("generalSettings/seedFinder/minAdvancesFactor", 0.5).toDouble();
+}
+
+double SConfig::getMaxAdvancesFactor() const
+{
+  return m_settings->value("generalSettings/seedFinder/maxAdvancesFactor", 1.5).toDouble();
 }
 
 bool SConfig::getSkipInstructionPage() const
@@ -202,6 +218,16 @@ void SConfig::setFrameOffset(const int frameDelay)
 void SConfig::setMaxAutoReroll(const int maxAutoReroll)
 {
   m_settings->setValue("generalSettings/predictor/MaxAutoReroll", maxAutoReroll);
+}
+
+void SConfig::setMinAdvancesFactor(const double factor)
+{
+  m_settings->setValue("generalSettings/seedFinder/minAdvancesFactor", factor);
+}
+
+void SConfig::setMaxAdvancesFactor(const double factor)
+{
+  m_settings->setValue("generalSettings/seedFinder/maxAdvancesFactor", factor);
 }
 
 void SConfig::setSkipInstructionPage(const bool skipInstructionPage)

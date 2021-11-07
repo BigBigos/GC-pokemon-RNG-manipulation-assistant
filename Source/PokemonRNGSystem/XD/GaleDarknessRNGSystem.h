@@ -41,8 +41,9 @@ private:
     any
   };
 
-  u32 rollRNGToBattleMenu(u32 seed, u16* counter = nullptr) final override;
-  bool generateBattleTeam(u32& seed, const std::vector<int> criteria) final override;
+  u32 rollRNGToBattleMenu(u32 seed, u32* counter = nullptr) final override;
+  bool generateBattleTeam(u32& seed, const std::vector<int> criteria,
+                          u32* counter = nullptr) final override;
   std::string getLastObtainedCriteriasString() final override;
   std::vector<int> obtainTeamGenerationCritera(u32& seed) final override;
   int getNbrCombinationsFirstTwoCriteria() final override;
@@ -58,12 +59,12 @@ private:
                                            const int secondaryIndex) final override;
   std::array<StatsRange, 6> getSecondaryStatsRange(const int secondaryIndex) final override;
   u32 generatePokemonPID(u32& seed, const u32 hTrainerId, const u32 lTrainerId, const u32 dummyId,
-                         u16* counter = nullptr,
+                         u32* counter = nullptr,
                          const WantedShininess shininess = WantedShininess::any,
                          const s8 wantedGender = -1, const u32 genderRatio = 257,
                          const s8 wantedNature = -1);
   std::array<u8, 6> generateEVs(u32& seed, const bool allowUnfilledEV, const bool endPrematurely,
-                                u16* counter = nullptr);
+                                u32* counter = nullptr);
 
   const int secondaryRngAdvanceSearchStart = 680000;
   const int secondarySearchSeedsAmount = 63000;

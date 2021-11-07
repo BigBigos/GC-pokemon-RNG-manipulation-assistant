@@ -4,7 +4,44 @@
 #include <QGroupBox>
 #include <QLabel>
 
+#include <cmath>
 #include <thread>
+
+namespace
+{
+class FractionSliderConverter final
+{
+public:
+  explicit FractionSliderConverter(const int digits)
+    : m_digits(digits),
+      m_doubleToIntFactor(std::pow(10.0, static_cast<double>(m_digits))),
+      m_intToDoubleFactor(1.0 / m_doubleToIntFactor)
+  {
+  }
+
+  double toDouble(const int value) const
+  {
+    return static_cast<double>(value) * m_intToDoubleFactor;
+  }
+
+  int fromDouble(const double value) const
+  {
+    return static_cast<int>(std::round(value * m_doubleToIntFactor));
+  }
+
+  QString toString(const int value) const
+  {
+    return QString("%1").arg(toDouble(value), 0, 'f', 1);
+  }
+
+private:
+  int m_digits;
+  double m_doubleToIntFactor;
+  double m_intToDoubleFactor;
+};
+
+const FractionSliderConverter advancesFactor(1);
+} // namespace
 
 GeneralTab::GeneralTab(QWidget* parent) : QWidget(parent)
 {
@@ -72,6 +109,50 @@ GeneralTab::GeneralTab(QWidget* parent) : QWidget(parent)
   QGroupBox* gbPredictor = new QGroupBox(tr("Starters predictor"));
   gbPredictor->setLayout(predictionTimeLayout);
 
+  QLabel* lblMinAdvancesFactor =
+      new QLabel(tr("Minimum fraction of auto reroll advancement assumed to be reached: "));
+  m_sldMinAdvancesFactor = new QSlider(Qt::Horizontal);
+  m_sldMinAdvancesFactor->setTickPosition(QSlider::TicksBothSides);
+  m_sldMinAdvancesFactor->setMinimum(advancesFactor.fromDouble(0.0));
+  m_sldMinAdvancesFactor->setMaximum(advancesFactor.fromDouble(2.0));
+  m_sldMinAdvancesFactor->setSingleStep(advancesFactor.fromDouble(0.1));
+  m_sldMinAdvancesFactor->setPageStep(advancesFactor.fromDouble(0.5));
+  m_sldMinAdvancesFactor->setValue(advancesFactor.fromDouble(0.5));
+  QLabel* lblMinAdvancesFactorValue =
+      new QLabel(advancesFactor.toString(m_sldMinAdvancesFactor->value()));
+  connect(m_sldMinAdvancesFactor, &QSlider::valueChanged, this, [=](const int value) {
+    lblMinAdvancesFactorValue->setText(advancesFactor.toString(value));
+  });
+  QHBoxLayout* hboxMinAdvancesFactor = new QHBoxLayout;
+  hboxMinAdvancesFactor->addWidget(lblMinAdvancesFactorValue);
+  hboxMinAdvancesFactor->addWidget(m_sldMinAdvancesFactor);
+
+  QLabel* lblMaxAdvancesFactor =
+      new QLabel(tr("Maximum fraction of auto reroll advancement assumed to be reached: "));
+  m_sldMaxAdvancesFactor = new QSlider(Qt::Horizontal);
+  m_sldMaxAdvancesFactor->setTickPosition(QSlider::TicksBothSides);
+  m_sldMaxAdvancesFactor->setMinimum(advancesFactor.fromDouble(0.0));
+  m_sldMaxAdvancesFactor->setMaximum(advancesFactor.fromDouble(2.0));
+  m_sldMaxAdvancesFactor->setSingleStep(advancesFactor.fromDouble(0.1));
+  m_sldMaxAdvancesFactor->setPageStep(advancesFactor.fromDouble(0.5));
+  m_sldMaxAdvancesFactor->setValue(advancesFactor.fromDouble(1.5));
+  QLabel* lblMaxAdvancesFactorValue =
+      new QLabel(advancesFactor.toString(m_sldMaxAdvancesFactor->value()));
+  connect(m_sldMaxAdvancesFactor, &QSlider::valueChanged, this, [=](const int value) {
+    lblMaxAdvancesFactorValue->setText(advancesFactor.toString(value));
+  });
+  QHBoxLayout* hboxMaxAdvancesFactor = new QHBoxLayout;
+  hboxMaxAdvancesFactor->addWidget(lblMaxAdvancesFactorValue);
+  hboxMaxAdvancesFactor->addWidget(m_sldMaxAdvancesFactor);
+
+  QFormLayout* autoRerollBoundLayout = new QFormLayout;
+  autoRerollBoundLayout->setLabelAlignment(Qt::AlignRight);
+  autoRerollBoundLayout->addRow(lblMinAdvancesFactor, hboxMinAdvancesFactor);
+  autoRerollBoundLayout->addRow(lblMaxAdvancesFactor, hboxMaxAdvancesFactor);
+
+  QGroupBox* gbAutoRerollBound = new QGroupBox(tr("Auto reroll bounds"));
+  gbAutoRerollBound->setLayout(autoRerollBoundLayout);
+
   m_chkRestorePreviousWindowGeometry = new QCheckBox(
       "Restore the previous main window's position and size at the start of the program");
   m_chkRestorePreviousWindowGeometry->setChecked(false);
@@ -79,6 +160,7 @@ GeneralTab::GeneralTab(QWidget* parent) : QWidget(parent)
   QVBoxLayout* mainLayout = new QVBoxLayout;
   mainLayout->addWidget(gbCPUSettings);
   mainLayout->addWidget(gbPredictor);
+  mainLayout->addWidget(gbAutoRerollBound);
   mainLayout->addWidget(m_chkRestorePreviousWindowGeometry);
   mainLayout->addStretch();
 
@@ -105,6 +187,16 @@ int GeneralTab::getMaxAutoReroll() const
   return m_spbMaxAutoReroll->value();
 }
 
+double GeneralTab::getMinAdvancesFactor() const
+{
+  return advancesFactor.toDouble(m_sldMinAdvancesFactor->value());
+}
+
+double GeneralTab::getMaxAdvancesFactor() const
+{
+  return advancesFactor.toDouble(m_sldMaxAdvancesFactor->value());
+}
+
 bool GeneralTab::getRestorePreviousWindowGeometry() const
 {
   return m_chkRestorePreviousWindowGeometry->isChecked();
@@ -128,6 +220,16 @@ void GeneralTab::setFrameOffset(const int frameDelay)
 void GeneralTab::setMaxAutoReroll(const int maxAutoReroll)
 {
   m_spbMaxAutoReroll->setValue(maxAutoReroll);
+}
+
+void GeneralTab::setMinAdvancesFactor(const double factor)
+{
+  m_sldMinAdvancesFactor->setValue(advancesFactor.fromDouble(factor));
+}
+
+void GeneralTab::setMaxAdvancesFactor(const double factor)
+{
+  m_sldMaxAdvancesFactor->setValue(advancesFactor.fromDouble(factor));
 }
 
 void GeneralTab::setRestorePreviousWindowGeometry(const bool restoreGeometry)

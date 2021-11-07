@@ -84,7 +84,8 @@ public:
                                                                        const int nbrSeconds);
   // Does one battle team generation RNG calls, returns whether or not the criteria sent matches the
   // outcome got
-  virtual bool generateBattleTeam(u32& seed, const std::vector<int> criteria) = 0;
+  virtual bool generateBattleTeam(u32& seed, const std::vector<int> criteria,
+                                  u32* counter = nullptr) = 0;
   // The last criterias obtained comes from a call to generateBattleTeam
   virtual std::string getLastObtainedCriteriasString() = 0;
   // Internally generates all the secondary Pokémons in the searh range
@@ -96,11 +97,13 @@ public:
                                                                  const int def, const int spAtk,
                                                                  const int spDef, const int speed,
                                                                  const int genderIndex);
+  // Get an array with all seeds within the bounds
+  std::vector<u32> getSeedsWithinBounds(u32 startingSeed, u32 minAdvances, u32 maxAdvances);
 
 protected:
   // The number of time the game polls the input per second on the naming screen
   static const int pollingRateNamingScreenPerSec = 60;
-  virtual u32 rollRNGToBattleMenu(const u32 seed, u16* counter = nullptr) = 0;
+  virtual u32 rollRNGToBattleMenu(const u32 seed, u32* counter = nullptr) = 0;
   virtual int getMinFramesAmountNamingScreen() = 0;
   // Do all the RNG calls to get to before the first possible frame of confirming the name on the
   // naming screen using a preset name
@@ -116,7 +119,7 @@ protected:
                                            const int searchSeedsAmount);
 
   // The LCG used in both Pokemon games
-  u32 inline LCG(u32& seed, u16* counter = nullptr)
+  u32 inline LCG(u32& seed, u32* counter = nullptr)
   {
     seed = seed * 0x343fd + 0x269EC3;
     if (counter != nullptr)
@@ -125,7 +128,7 @@ protected:
   }
 
   // Apply the LCG n times in O(log n) complexity
-  u32 inline LCGn(u32 seed, const u32 n, u16* counter = nullptr)
+  u32 inline LCGn(u32 seed, const u32 n, u32* counter = nullptr)
   {
     u32 ex = n - 1;
     u32 q = 0x343fd;

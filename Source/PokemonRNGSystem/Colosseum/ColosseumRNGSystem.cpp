@@ -74,7 +74,7 @@ std::string ColosseumRNGSystem::getPrecalcFilename()
 
 u32 inline ColosseumRNGSystem::generatePokemonPID(u32& seed, const u32 hTrainerId,
                                                   const u32 lTrainerId, const u32 dummyId,
-                                                  u16* counter, const s8 wantedGender,
+                                                  u32* counter, const s8 wantedGender,
                                                   const u32 genderRatio, const s8 wantedNature)
 {
   u32 id = 0;
@@ -114,7 +114,7 @@ u32 inline ColosseumRNGSystem::generatePokemonPID(u32& seed, const u32 hTrainerI
   return id;
 }
 
-u32 inline ColosseumRNGSystem::rollRNGToPokemonCompanyLogo(u32 seed, u16* counter)
+u32 inline ColosseumRNGSystem::rollRNGToPokemonCompanyLogo(u32 seed, u32* counter)
 {
   // The game generates 500 numbers of 32 bit in a row, this is 2 LCG call per number which makes
   // 1000 calls
@@ -145,7 +145,7 @@ u32 inline ColosseumRNGSystem::rollRNGToPokemonCompanyLogo(u32 seed, u16* counte
   return seed;
 }
 
-u32 inline ColosseumRNGSystem::rollRNGEnteringBattleMenu(u32 seed, u16* counter)
+u32 inline ColosseumRNGSystem::rollRNGEnteringBattleMenu(u32 seed, u32* counter)
 {
   seed = LCGn(seed, 120, counter);
   for (int i = 0; i < 4; i++)
@@ -183,47 +183,48 @@ u32 inline ColosseumRNGSystem::rollRNGEnteringBattleMenu(u32 seed, u16* counter)
   return seed;
 }
 
-u32 ColosseumRNGSystem::rollRNGToBattleMenu(u32 seed, u16* counter)
+u32 ColosseumRNGSystem::rollRNGToBattleMenu(u32 seed, u32* counter)
 {
   seed = rollRNGToPokemonCompanyLogo(seed, counter);
   return rollRNGEnteringBattleMenu(seed, counter);
 }
 
-bool ColosseumRNGSystem::generateBattleTeam(u32& seed, const std::vector<int> criteria)
+bool ColosseumRNGSystem::generateBattleTeam(u32& seed, const std::vector<int> criteria,
+                                            u32* counter)
 {
-  int enemyTeamIndex = (LCG(seed) >> 16) & 7;
+  int enemyTeamIndex = (LCG(seed, counter) >> 16) & 7;
   int playerTeamIndex = -1;
   // The game generates a player team index as long as it is not the same as the enemy one
   do
   {
-    playerTeamIndex = (LCG(seed) >> 16) & 7;
+    playerTeamIndex = (LCG(seed, counter) >> 16) & 7;
   } while (enemyTeamIndex == playerTeamIndex);
 
   if (playerTeamIndex != criteria[0] && criteria[0] != -1)
     return false;
 
   // The enemy trainer ID is generated as candidate, low then high 16 bits
-  u32 lTrainerId = LCG(seed) >> 16;
-  u32 hTrainerId = LCG(seed) >> 16;
+  u32 lTrainerId = LCG(seed, counter) >> 16;
+  u32 hTrainerId = LCG(seed, counter) >> 16;
   // For each enemy pokemon
   for (int i = 0; i < 6; i++)
   {
     // A dummy perosnality ID is generated, high then low 16 bits
-    u32 hDummyId = LCG(seed) >> 16;
-    u32 lDummyId = LCG(seed) >> 16;
+    u32 hDummyId = LCG(seed, counter) >> 16;
+    u32 lDummyId = LCG(seed, counter) >> 16;
     u32 dummyId = (hDummyId << 16) | (lDummyId);
 
     // These calls generate the IV and the ability, they don't actually matter for the rest
     // of the calls
-    LCG(seed);
-    LCG(seed);
-    LCG(seed);
+    LCG(seed, counter);
+    LCG(seed, counter);
+    LCG(seed, counter);
     generatePokemonPID(
-        seed, hTrainerId, lTrainerId, dummyId, nullptr, s_genderTeamsData[enemyTeamIndex][i],
+        seed, hTrainerId, lTrainerId, dummyId, counter, s_genderTeamsData[enemyTeamIndex][i],
         s_genderRatioTeamsData[enemyTeamIndex][i], s_natureTeamsData[enemyTeamIndex][i]);
   }
 
-  int playerNameIndex = (LCG(seed) >> 16) % 3;
+  int playerNameIndex = (LCG(seed, counter) >> 16) % 3;
   if (playerNameIndex != criteria[1] && criteria[1] != -1)
     return false;
 
@@ -235,23 +236,23 @@ bool ColosseumRNGSystem::generateBattleTeam(u32& seed, const std::vector<int> cr
   }
 
   // The player trainer ID is generated, low then high 16 bits
-  lTrainerId = LCG(seed) >> 16;
-  hTrainerId = LCG(seed) >> 16;
+  lTrainerId = LCG(seed, counter) >> 16;
+  hTrainerId = LCG(seed, counter) >> 16;
   // For each player pokemon
   for (int i = 0; i < 6; i++)
   {
     // A dummy personality ID is generated, high then low 16 bits
-    u32 hDummyId = LCG(seed) >> 16;
-    u32 lDummyId = LCG(seed) >> 16;
+    u32 hDummyId = LCG(seed, counter) >> 16;
+    u32 lDummyId = LCG(seed, counter) >> 16;
     u32 dummyId = (hDummyId << 16) | (lDummyId);
 
     // These calls generate the IV and the ability, they don't actually matter for the rest
     // of the calls
-    LCG(seed);
-    LCG(seed);
-    LCG(seed);
+    LCG(seed, counter);
+    LCG(seed, counter);
+    LCG(seed, counter);
     generatePokemonPID(
-        seed, hTrainerId, lTrainerId, dummyId, nullptr, s_genderTeamsData[playerTeamIndex][i],
+        seed, hTrainerId, lTrainerId, dummyId, counter, s_genderTeamsData[playerTeamIndex][i],
         s_genderRatioTeamsData[playerTeamIndex][i], s_natureTeamsData[playerTeamIndex][i]);
   }
   return true;

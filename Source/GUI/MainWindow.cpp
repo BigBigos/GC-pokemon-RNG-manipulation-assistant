@@ -9,6 +9,7 @@
 #include <QVBoxLayout>
 #include <QtConcurrent>
 
+#include <iostream>
 #include <sstream>
 #include <thread>
 
@@ -16,6 +17,7 @@
 #include "../PokemonRNGSystem/XD/GaleDarknessRNGSystem.h"
 #include "GUICommon.h"
 #include "SPokemonRNG.h"
+#include "SeedFinder/AutoRerollSeedData.h"
 #include "SeedFinder/SeedFinderWizard.h"
 #include "Settings/DlgSettings.h"
 #include "Settings/SConfig.h"
@@ -103,7 +105,7 @@ void MainWindow::initialiseWidgets()
   connect(m_btnAutoRerollPrediciton, &QPushButton::clicked, this, &MainWindow::autoRerollPredictor);
   m_btnAutoRerollPrediciton->setEnabled(false);
 
-  m_lblRerollCount = new QLabel(QString::number(m_rerollCount), this);
+  m_lblRerollCount = new QLabel(QString::number(m_current.m_rerollCount), this);
 
   m_predictorWidget = new PredictorWidget(this);
   m_statsReporterWidget = new StatsReporterWidget(this);
@@ -231,8 +233,9 @@ void MainWindow::gameChanged()
   m_btnReset->setEnabled(false);
   m_btnRerollPrediciton->setEnabled(false);
   m_btnAutoRerollPrediciton->setEnabled(false);
-  m_rerollCount = 0;
-  m_lblRerollCount->setText(QString::number(m_rerollCount));
+  m_current.m_rerollCount = 0;
+  m_current.m_autoRerollSeedCount = 0;
+  m_lblRerollCount->setText(QString::number(m_current.m_rerollCount));
   m_edtManualSeed->setEnabled(true);
   m_btnSetSeedManually->setEnabled(true);
   m_lblCurrentSeed->setText("  ????  ");
@@ -245,23 +248,23 @@ void MainWindow::gameChanged()
 
 void MainWindow::setCurrentSeed(u32 seed, int rerollCount)
 {
-  m_currentSeed = seed;
+  m_current.m_seed = seed;
 
   GUICommon::gameSelection selection =
       static_cast<GUICommon::gameSelection>(m_cmbGame->currentIndex());
 
-  m_lblCurrentSeed->setText(QString::number(m_currentSeed, 16).toUpper());
+  m_lblCurrentSeed->setText(QString::number(m_current.m_seed, 16).toUpper());
   std::vector<BaseRNGSystem::StartersPrediction> predictions =
       SPokemonRNG::getCurrentSystem()->predictStartersForNbrSeconds(
-          m_currentSeed, SConfig::getInstance().getPredictionTime());
+          m_current.m_seed, SConfig::getInstance().getPredictionTime());
   m_predictorWidget->setStartersPrediction(predictions);
   m_predictorWidget->updateGUI(selection);
   m_predictorWidget->filterUnwanted(m_chkFilterUnwantedPredictions->isChecked());
   m_btnReset->setEnabled(true);
   m_btnRerollPrediciton->setEnabled(true);
   m_btnAutoRerollPrediciton->setEnabled(true);
-  m_rerollCount = rerollCount;
-  m_lblRerollCount->setText(QString::number(m_rerollCount));
+  m_current.m_rerollCount = rerollCount;
+  m_lblRerollCount->setText(QString::number(m_current.m_rerollCount));
   m_btnStoreSeed->setEnabled(true);
 }
 
@@ -285,10 +288,13 @@ void MainWindow::startSeedFinder()
 
   GUICommon::gameSelection selection =
       static_cast<GUICommon::gameSelection>(m_cmbGame->currentIndex());
-  SeedFinderWizard* wizard = new SeedFinderWizard(this, selection);
+  const AutoRerollSeedData autoRerollSeedData{
+      m_current.m_autoRerollBeginSeed, m_current.m_autoRerollSeedCount};
+  SeedFinderWizard* wizard = new SeedFinderWizard(this, selection, autoRerollSeedData);
   if (wizard->exec() == QDialog::Accepted)
   {
     setCurrentSeed(wizard->getSeeds()[0], 0);
+    m_current.m_autoRerollSeedCount = 0;
     m_seedSet = true;
   }
 
@@ -303,8 +309,9 @@ void MainWindow::resetPredictor()
   m_btnReset->setEnabled(false);
   m_btnRerollPrediciton->setEnabled(false);
   m_btnAutoRerollPrediciton->setEnabled(false);
-  m_rerollCount = 0;
-  m_lblRerollCount->setText(QString::number(m_rerollCount));
+  m_current.m_rerollCount = 0;
+  m_current.m_autoRerollSeedCount = 0;
+  m_lblRerollCount->setText(QString::number(m_current.m_rerollCount));
   m_btnStoreSeed->setEnabled(false);
   m_btnRestoreSeed->setEnabled(false);
   m_lblCurrentSeed->setText("  ????  ");
@@ -316,15 +323,15 @@ void MainWindow::resetPredictor()
 
 void MainWindow::storeSeed()
 {
-  m_storedSeed = m_currentSeed;
-  m_storedRerollCount = m_rerollCount;
-  m_lblStoredSeed->setText(QString::number(m_storedSeed, 16).toUpper());
+  m_stored = m_current;
+  m_lblStoredSeed->setText(QString::number(m_stored.m_seed, 16).toUpper());
   m_btnRestoreSeed->setEnabled(true);
 }
 
 void MainWindow::restoreSeed()
 {
-  setCurrentSeed(m_storedSeed, m_storedRerollCount);
+  m_current = m_stored;
+  setCurrentSeed(m_stored.m_seed, m_stored.m_rerollCount);
 }
 
 void MainWindow::setSeedManually()
@@ -338,6 +345,7 @@ void MainWindow::setSeedManually()
     u32 seed = 0;
     ss >> seed;
     setCurrentSeed(seed, 0);
+    m_current.m_autoRerollSeedCount = 0;
     m_seedSet = true;
   }
   else
@@ -354,10 +362,10 @@ void MainWindow::setSeedManually()
 void MainWindow::singleRerollPredictor()
 {
   rerollPredictor(true);
-  m_lblCurrentSeed->setText(QString::number(m_currentSeed, 16).toUpper());
+  m_lblCurrentSeed->setText(QString::number(m_current.m_seed, 16).toUpper());
 }
 
-bool MainWindow::rerollPredictor(bool withGuiUpdates)
+bool MainWindow::rerollPredictor(bool withGuiUpdates, u32* counter)
 {
   std::vector<int> dummyCriteria;
   for (int i = 0; i < 6; i++)
@@ -365,11 +373,11 @@ bool MainWindow::rerollPredictor(bool withGuiUpdates)
 
   GUICommon::gameSelection selection =
       static_cast<GUICommon::gameSelection>(m_cmbGame->currentIndex());
-  SPokemonRNG::getCurrentSystem()->generateBattleTeam(m_currentSeed, dummyCriteria);
+  SPokemonRNG::getCurrentSystem()->generateBattleTeam(m_current.m_seed, dummyCriteria, counter);
   std::vector<BaseRNGSystem::StartersPrediction> predictions =
       SPokemonRNG::getCurrentSystem()->predictStartersForNbrSeconds(
-          m_currentSeed, SConfig::getInstance().getPredictionTime());
-  m_rerollCount++;
+          m_current.m_seed, SConfig::getInstance().getPredictionTime());
+  m_current.m_rerollCount++;
 
   m_predictorWidget->setStartersPrediction(predictions);
   bool desiredStarterFound = m_predictorWidget->desiredPredictionFound(selection);
@@ -378,7 +386,7 @@ bool MainWindow::rerollPredictor(bool withGuiUpdates)
   {
     m_predictorWidget->updateGUI(selection);
     m_predictorWidget->filterUnwanted(m_chkFilterUnwantedPredictions->isChecked());
-    m_lblRerollCount->setText(QString::number(m_rerollCount));
+    m_lblRerollCount->setText(QString::number(m_current.m_rerollCount));
     m_statsReporterWidget->setDisabled(true);
   }
   return desiredStarterFound;
@@ -396,11 +404,13 @@ void MainWindow::autoRerollPredictor()
   autoRerollDlg->setLayout(mainLayout);
   autoRerollDlg->show();
 
+  m_current.m_autoRerollBeginSeed = m_current.m_seed;
+  m_current.m_autoRerollSeedCount = 0;
   bool desiredPredictionFound = false;
   int nbrRerolls = 0;
   for (nbrRerolls; nbrRerolls < SConfig::getInstance().getMaxAutoReroll(); nbrRerolls++)
   {
-    if (rerollPredictor(false))
+    if (rerollPredictor(false, &m_current.m_autoRerollSeedCount))
     {
       desiredPredictionFound = true;
       break;
@@ -442,8 +452,8 @@ void MainWindow::autoRerollPredictor()
       static_cast<GUICommon::gameSelection>(m_cmbGame->currentIndex());
   m_predictorWidget->updateGUI(selection);
   m_predictorWidget->filterUnwanted(m_chkFilterUnwantedPredictions->isChecked());
-  m_lblRerollCount->setText(QString::number(m_rerollCount));
-  m_lblCurrentSeed->setText(QString::number(m_currentSeed, 16).toUpper());
+  m_lblRerollCount->setText(QString::number(m_current.m_rerollCount));
+  m_lblCurrentSeed->setText(QString::number(m_current.m_seed, 16).toUpper());
   m_statsReporterWidget->setDisabled(true);
 }
 
@@ -455,7 +465,7 @@ void MainWindow::openSettings()
   if (dlgResult == QDialog::Accepted && m_seedSet)
   {
     // Refresh the predictor
-    setCurrentSeed(m_currentSeed, m_rerollCount);
+    setCurrentSeed(m_current.m_seed, m_current.m_rerollCount);
   }
 }
 
@@ -471,9 +481,7 @@ void MainWindow::generatePrecalc()
   msg->exec();
   if (msg->result() == QMessageBox::Yes)
   {
-    unsigned int threadCount = SConfig::getInstance().getThreadLimit();
-    if (threadCount == 0)
-      threadCount = std::thread::hardware_concurrency();
+    const unsigned int threadCount = SConfig::getInstance().getThreadCount();
 
     delete m_dlgProgressPrecalc;
     m_dlgProgressPrecalc = new QProgressDialog(this);

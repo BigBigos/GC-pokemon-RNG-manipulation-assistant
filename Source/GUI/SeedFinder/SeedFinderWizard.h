@@ -13,6 +13,7 @@
 
 #include "../../Common/CommonTypes.h"
 #include "../GUICommon.h"
+#include "AutoRerollSeedData.h"
 #include "SeedFinderPassPage.h"
 
 class SeedFinderWizard : public QWizard
@@ -31,7 +32,8 @@ public:
     End = 1000
   };
 
-  SeedFinderWizard(QWidget* parent, const GUICommon::gameSelection game);
+  SeedFinderWizard(QWidget* parent, const GUICommon::gameSelection game,
+                   const AutoRerollSeedData autoRerollSeedData = AutoRerollSeedData());
   ~SeedFinderWizard();
 
   void accept() override;
@@ -56,7 +58,8 @@ private:
   bool m_seedFinderDone = false;
   std::vector<u32> m_seeds;
   QVector<SeedFinderPassPage*> m_passPages;
-  GUICommon::gameSelection m_game;
+  const GUICommon::gameSelection m_game;
+  const AutoRerollSeedData m_autoRerollSeedData;
   bool m_cancelSeedFinderPass;
   QFuture<void> m_seedFinderFuture;
 };

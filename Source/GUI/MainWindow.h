@@ -46,7 +46,15 @@ private:
 
   void setCurrentSeed(u32 seed, int rerollCount);
   // Returns whether we have a desired prediction after the reroll
-  bool rerollPredictor(bool withGuiUpdates);
+  bool rerollPredictor(bool withGuiUpdates, u32* counter = nullptr);
+
+  struct SeedData final
+  {
+    u32 m_seed = 0;
+    int m_rerollCount = 0;
+    u32 m_autoRerollBeginSeed = 0;
+    u32 m_autoRerollSeedCount = 0;
+  };
 
   QMenu* m_menuFile;
   QMenu* m_menuEdit;
@@ -73,9 +81,7 @@ private:
   bool m_cancelPrecalc = false;
   QFuture<void> m_precalcFuture;
   QProgressDialog* m_dlgProgressPrecalc;
-  u32 m_currentSeed = 0;
+  SeedData m_current;
+  SeedData m_stored;
   bool m_seedSet = false;
-  u32 m_storedSeed = 0;
-  int m_rerollCount = 0;
-  int m_storedRerollCount = 0;
 };

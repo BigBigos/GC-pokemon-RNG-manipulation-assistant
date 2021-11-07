@@ -10,10 +10,12 @@
 #include "../../PokemonRNGSystem/BaseRNGSystem.h"
 #include "../../PokemonRNGSystem/Colosseum/ColosseumRNGSystem.h"
 #include "../../PokemonRNGSystem/XD/GaleDarknessRNGSystem.h"
+#include "../Settings/SConfig.h"
 #include "../SPokemonRNG.h"
 #include "SeedFinderWizard.h"
 
-SeedFinderPassPage::SeedFinderPassPage(QWidget* parent, const int nbrFoundSeeds)
+SeedFinderPassPage::SeedFinderPassPage(QWidget* parent, const int nbrFoundSeeds,
+                                       const bool canBoundByAutoRerolls)
     : QWizardPage(parent)
 {
   setSubTitle("Fill in the informations you see on the battle confirmation screen");
@@ -21,25 +23,19 @@ SeedFinderPassPage::SeedFinderPassPage(QWidget* parent, const int nbrFoundSeeds)
   QLabel* label = new QLabel(QString::number(SeedFinderWizard::numberPass));
   m_pbSeedFinder = new QProgressBar(this);
   m_pbSeedFinder->setVisible(false);
-  if (nbrFoundSeeds == 0)
-  {
-    m_pbSeedFinder->setMinimum(0);
-    m_pbSeedFinder->setMaximum(0);
-    m_pbSeedFinder->setValue(0);
-    m_lblSeedFinderStatus = new QLabel("Filtering seeds from the precalculation file...");
-  }
-  else
-  {
-    m_pbSeedFinder->setMinimum(0);
-    m_pbSeedFinder->setMaximum(nbrFoundSeeds);
-    m_pbSeedFinder->setValue(0);
-    m_lblSeedFinderStatus =
-        new QLabel("Simulating " + QString::number(nbrFoundSeeds) + " seeds using " +
-                   QString::number(std::thread::hardware_concurrency()) + " thread(s)...");
-  }
+  m_pbSeedFinder->setMinimum(0);
+  m_pbSeedFinder->setValue(0);
+  m_lblSeedFinderStatus = new QLabel();
   m_lblSeedFinderStatus->setVisible(false);
   m_lblSeedFinderStatus->setAlignment(Qt::AlignHCenter);
   m_lblSeedFinderStatus->setWordWrap(true);
+
+  setNumberFoundSeeds(nbrFoundSeeds);
+
+  if (nbrFoundSeeds == 0 && canBoundByAutoRerolls)
+  {
+    m_chkAutoRerollBound = new QCheckBox(tr("Bound seeds within most recent auto-rerolls"));
+  }
 
   m_inputWidget = new QWidget(this);
   QVBoxLayout* layout = new QVBoxLayout;
@@ -48,6 +44,29 @@ SeedFinderPassPage::SeedFinderPassPage(QWidget* parent, const int nbrFoundSeeds)
 
 SeedFinderPassPage::~SeedFinderPassPage()
 {
+}
+
+bool SeedFinderPassPage::shouldBoundByAutoRerolls() const
+{
+  return m_chkAutoRerollBound && m_chkAutoRerollBound->isChecked();
+}
+
+void SeedFinderPassPage::setNumberFoundSeeds(const int nbrFoundSeeds)
+{
+  if (nbrFoundSeeds == 0)
+  {
+    m_pbSeedFinder->setMaximum(0);
+    m_lblSeedFinderStatus->setText("Filtering seeds from the precalculation file...");
+  }
+  else
+  {
+    m_pbSeedFinder->setMaximum(nbrFoundSeeds);
+    const unsigned int threadCount = SConfig::getInstance().getThreadCount();
+    
+    m_lblSeedFinderStatus->setText(
+        "Simulating " + QString::number(nbrFoundSeeds) + " seeds using " +
+        QString::number(threadCount) + " thread(s)...");
+  }
 }
 
 void SeedFinderPassPage::setSeedFinderDone(const bool seedFinderDone)
@@ -75,8 +94,9 @@ int SeedFinderPassPage::nextId() const
     return SeedFinderWizard::numberPass + SeedFinderWizard::pageID::SeedFinderPass;
 }
 
-SeedFinderPassColosseum::SeedFinderPassColosseum(QWidget* parent, const int nbrFoundSeeds)
-    : SeedFinderPassPage(parent, nbrFoundSeeds)
+SeedFinderPassColosseum::SeedFinderPassColosseum(QWidget* parent, const int nbrFoundSeeds,
+                                                 const bool canBoundByAutoRerolls)
+    : SeedFinderPassPage(parent, nbrFoundSeeds, canBoundByAutoRerolls)
 {
   m_playerNameIndexBtnGroup = new QButtonGroup(this);
 
@@ -169,6 +189,8 @@ SeedFinderPassColosseum::SeedFinderPassColosseum(QWidget* parent, const int nbrF
 
   QVBoxLayout* mainLayout = new QVBoxLayout;
   mainLayout->addWidget(m_inputWidget);
+  if (m_chkAutoRerollBound)
+    mainLayout->addWidget(m_chkAutoRerollBound);
   mainLayout->addWidget(m_lblSeedFinderStatus);
   mainLayout->addWidget(m_pbSeedFinder);
   mainLayout->addStretch();
@@ -188,8 +210,9 @@ std::vector<int> SeedFinderPassColosseum::obtainCriteria()
   return criteria;
 }
 
-SeedFinderPassXD::SeedFinderPassXD(QWidget* parent, const int nbrFoundSeeds)
-    : SeedFinderPassPage(parent, nbrFoundSeeds)
+SeedFinderPassXD::SeedFinderPassXD(QWidget* parent, const int nbrFoundSeeds,
+                                   const bool canBoundByAutoRerolls)
+    : SeedFinderPassPage(parent, nbrFoundSeeds, canBoundByAutoRerolls)
 {
   m_playerTeamIndexBtnGroup = new QButtonGroup(this);
 
@@ -358,6 +381,8 @@ SeedFinderPassXD::SeedFinderPassXD(QWidget* parent, const int nbrFoundSeeds)
 
   QVBoxLayout* mainLayout = new QVBoxLayout;
   mainLayout->addWidget(m_inputWidget);
+  if (m_chkAutoRerollBound)
+    mainLayout->addWidget(m_chkAutoRerollBound);
   mainLayout->addWidget(m_lblSeedFinderStatus);
   mainLayout->addWidget(m_pbSeedFinder);
   mainLayout->addStretch();

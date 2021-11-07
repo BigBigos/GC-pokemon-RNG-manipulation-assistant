@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <QButtonGroup>
+#include <QCheckBox>
 #include <QLabel>
 #include <QProgressBar>
 #include <QSpinBox>
@@ -11,18 +12,22 @@
 class SeedFinderPassPage : public QWizardPage
 {
 public:
-  SeedFinderPassPage(QWidget* parent, const int nbrFoundSeeds);
+  SeedFinderPassPage(QWidget* parent, const int nbrFoundSeeds,
+                     const bool canBoundByAutoRerolls);
   ~SeedFinderPassPage();
 
   int nextId() const override;
 
   virtual std::vector<int> obtainCriteria() = 0;
 
+  bool shouldBoundByAutoRerolls() const;
+  void setNumberFoundSeeds(const int nbrFoundSeeds);
   void setSeedFinderDone(const bool seedFinderDone);
   void setSeedFinderProgress(const long nbrSeedsSimulated);
-  virtual void showSeedFinderProgress(const bool showProgress);
+  void showSeedFinderProgress(const bool showProgress);
 
 protected:
+  QCheckBox* m_chkAutoRerollBound = nullptr;
   QLabel* m_lblSeedFinderStatus;
   QProgressBar* m_pbSeedFinder;
   QWidget* m_inputWidget;
@@ -34,7 +39,8 @@ private:
 class SeedFinderPassColosseum : public SeedFinderPassPage
 {
 public:
-  SeedFinderPassColosseum(QWidget* parent, const int nbrFoundSeeds);
+  SeedFinderPassColosseum(QWidget* parent, const int nbrFoundSeeds,
+                          const bool canBoundByAutoRerolls);
 
   std::vector<int> obtainCriteria() override;
 
@@ -46,7 +52,8 @@ private:
 class SeedFinderPassXD : public SeedFinderPassPage
 {
 public:
-  SeedFinderPassXD(QWidget* parent, const int nbrFoundSeeds);
+  SeedFinderPassXD(QWidget* parent, const int nbrFoundSeeds,
+                   const bool canBoundByAutoRerolls);
 
   std::vector<int> obtainCriteria() override;
 

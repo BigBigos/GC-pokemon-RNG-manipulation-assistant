@@ -23,6 +23,7 @@ set(SRCS PokemonRNGSystem/BaseRNGSystem.cpp
          GUI/Settings/ColosseumTab.cpp
          GUI/Settings/GaleDarknessTab.cpp
          GUI/Settings/DlgSettings.cpp
+         GUI/SeedFinder/AutoRerollSeedData.cpp
          GUI/SeedFinder/SeedFinderPassPage.cpp
          GUI/SeedFinder/SeedFinderWizard.cpp
          GUI/Predictor/PredictorWidget.cpp

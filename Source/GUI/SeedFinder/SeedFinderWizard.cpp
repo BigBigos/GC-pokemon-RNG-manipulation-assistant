@@ -15,8 +15,9 @@
 
 int SeedFinderWizard::numberPass = 1;
 
-SeedFinderWizard::SeedFinderWizard(QWidget* parent, const GUICommon::gameSelection game)
-    : QWizard(parent), m_game(game)
+SeedFinderWizard::SeedFinderWizard(QWidget* parent, const GUICommon::gameSelection game,
+                                   const AutoRerollSeedData autoRerollSeedData)
+    : QWizard(parent), m_game(game), m_autoRerollSeedData(autoRerollSeedData)
 {
   numberPass = 1;
   m_cancelSeedFinderPass = false;
@@ -78,10 +79,12 @@ SeedFinderPassPage* SeedFinderWizard::getSeedFinderPassPageForGame()
   switch (m_game)
   {
   case GUICommon::gameSelection::Colosseum:
-    page = new SeedFinderPassColosseum(this, static_cast<int>(m_seeds.size()));
+    page = new SeedFinderPassColosseum(this, static_cast<int>(m_seeds.size()),
+                                       m_autoRerollSeedData.isActive());
     break;
   case GUICommon::gameSelection::XD:
-    page = new SeedFinderPassXD(this, static_cast<int>(m_seeds.size()));
+    page = new SeedFinderPassXD(this, static_cast<int>(m_seeds.size()),
+                                m_autoRerollSeedData.isActive());
     break;
   default:
     return nullptr;
@@ -101,10 +104,14 @@ void SeedFinderWizard::nextSeedFinderPass()
 
   button(QWizard::CustomButton1)->setEnabled(false);
 
+  if (page->shouldBoundByAutoRerolls())
+  {
+    m_seeds = m_autoRerollSeedData.getSeeds();
+    page->setNumberFoundSeeds(static_cast<int>(m_seeds.size()));
+  }
+
   page->showSeedFinderProgress(true);
-  unsigned int threadCount = SConfig::getInstance().getThreadLimit();
-  if (threadCount == 0)
-    threadCount = std::thread::hardware_concurrency();
+  const unsigned int threadCount = SConfig::getInstance().getThreadCount();
 
   m_seedFinderFuture = QtConcurrent::run([=] {
     SPokemonRNG::getCurrentSystem()->seedFinderPass(

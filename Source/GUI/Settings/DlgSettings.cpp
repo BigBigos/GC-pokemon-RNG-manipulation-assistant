@@ -56,6 +56,8 @@ void DlgSettings::loadSettings()
   m_generalTab->setFrameOffset(SConfig::getInstance().getFrameOffset());
   m_generalTab->setThreadLimit(SConfig::getInstance().getThreadLimit());
   m_generalTab->setMaxAutoReroll(SConfig::getInstance().getMaxAutoReroll());
+  m_generalTab->setMinAdvancesFactor(SConfig::getInstance().getMinAdvancesFactor());
+  m_generalTab->setMaxAdvancesFactor(SConfig::getInstance().getMaxAdvancesFactor());
   m_generalTab->setRestorePreviousWindowGeometry(
       SConfig::getInstance().getRestorePreviousWindowGeometry());
 
@@ -71,6 +73,8 @@ void DlgSettings::saveSettings() const
   SConfig::getInstance().setFrameOffset(m_generalTab->getFrameOffset());
   SConfig::getInstance().setThreadLimit(m_generalTab->getThreadLimit());
   SConfig::getInstance().setMaxAutoReroll(m_generalTab->getMaxAutoReroll());
+  SConfig::getInstance().setMinAdvancesFactor(m_generalTab->getMinAdvancesFactor());
+  SConfig::getInstance().setMaxAdvancesFactor(m_generalTab->getMaxAdvancesFactor());
   SConfig::getInstance().setRestorePreviousWindowGeometry(
       m_generalTab->getRestorePreviousWindowGeometry());
 

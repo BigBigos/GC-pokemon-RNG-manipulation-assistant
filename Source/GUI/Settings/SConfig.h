@@ -13,9 +13,12 @@ public:
   void operator=(SConfig const&) = delete;
 
   int getThreadLimit() const;
+  unsigned int getThreadCount() const;
   int getPredictionTime() const;
   int getFrameOffset() const;
   int getMaxAutoReroll() const;
+  double getMinAdvancesFactor() const;
+  double getMaxAdvancesFactor() const;
   bool getSkipInstructionPage() const;
   bool getRestorePreviousWindowGeometry() const;
   QByteArray getPreviousWindowGeometry() const;
@@ -39,6 +42,8 @@ public:
   void setPredictionTime(const int predictionTime);
   void setFrameOffset(const int frameDelay);
   void setMaxAutoReroll(const int maxAutoReroll);
+  void setMinAdvancesFactor(const double factor);
+  void setMaxAdvancesFactor(const double factor);
   void setSkipInstructionPage(const bool skipInstructionPage);
   void setRestorePreviousWindowGeometry(const bool restoreWindowGeometry);
   void setPreviousWindowGeometry(const QByteArray windowGeometry);

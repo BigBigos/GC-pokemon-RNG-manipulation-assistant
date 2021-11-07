@@ -292,3 +292,17 @@ BaseRNGSystem::getFilteredSecondaryCandidates(const int hp, const int atk, const
 
   return filteredCandidates;
 }
+
+std::vector<u32>
+BaseRNGSystem::getSeedsWithinBounds(u32 startingSeed, u32 minAdvances, u32 maxAdvances)
+{
+  std::vector<u32> seeds;
+  seeds.reserve(maxAdvances - minAdvances + 1);
+
+  u32 seed = (minAdvances == 0 ? startingSeed : LCGn(startingSeed, minAdvances));
+
+  for (u32 idx = minAdvances; idx <= maxAdvances; ++idx)
+    seeds.push_back(LCG(seed));
+  
+  return seeds;
+}
